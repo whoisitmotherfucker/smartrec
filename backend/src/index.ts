@@ -4,6 +4,7 @@ import 'express-async-errors';
 import express from 'express';
 import cookieSession from 'cookie-session';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { shopifyApp } from './services/shopify';
 import { authRouter } from './routes/auth';
@@ -56,7 +57,7 @@ app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOS
 
 // ─── Serve React admin UI static assets (built by Vite into backend/public) ──
 const publicDir = path.join(__dirname, '..', 'public');
-app.use(express.static(publicDir));
+app.use(express.static(publicDir, { index: false })); // index: false so the SPA fallback handles it
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/auth', authRouter);
@@ -65,10 +66,14 @@ app.use('/api', apiRouter);
 app.use('/public', publicRouter);  // Unauthenticated endpoints called by storefront widget
 
 // ─── SPA fallback — must be AFTER all API routes ─────────────────────────────
-// Any GET that didn't match an API route gets index.html so React Router works
-// inside the Shopify embedded iframe.
+// Serves index.html with SHOPIFY_API_KEY injected so the App Bridge CDN script
+// can initialise itself via the data-api-key attribute.
 app.get('*', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'index.html'));
+  const indexPath = path.join(publicDir, 'index.html');
+  let html = fs.readFileSync(indexPath, 'utf-8');
+  html = html.replace('__SHOPIFY_API_KEY__', process.env.SHOPIFY_API_KEY || '');
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
 });
 
 // ─── Error handler ────────────────────────────────────────────────────────────
