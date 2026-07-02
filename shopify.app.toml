@@ -12,5 +12,10 @@ redirect_urls = [ "https://smartrec-backend-production.up.railway.app/auth/callb
 [webhooks]
 api_version = "2025-04"
 
+[privacy_compliance]
+customer_deletion_url = "https://smartrec-backend-production.up.railway.app/webhooks/customers/redact"
+customer_data_request_url = "https://smartrec-backend-production.up.railway.app/webhooks/customers/data_request"
+shop_deletion_url = "https://smartrec-backend-production.up.railway.app/webhooks/shop/redact"
+
 [pos]
 embedded = false
