@@ -5,7 +5,6 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "prebuild": "cd ../frontend && npm install --include=dev && npx vite build",
     "build": "npx prisma generate && tsc",
     "start": "node dist/index.js",
     "db:migrate": "npx prisma db push --accept-data-loss",
