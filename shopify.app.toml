@@ -12,5 +12,9 @@ redirect_urls = [ "https://smartrec-backend-production.up.railway.app/auth/callb
 [webhooks]
 api_version = "2025-04"
 
+  [[webhooks.subscriptions]]
+  compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+  uri = "/webhooks/compliance"
+
 [pos]
 embedded = false

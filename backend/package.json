@@ -1,6 +1,6 @@
 {
   "name": "smartrec-backend",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "SmartRec backend — Shopify app server",
   "main": "dist/index.js",
   "scripts": {

@@ -154,8 +154,45 @@ webhookRouter.post('/app/uninstalled', async (req, res) => {
   logger.info(`App uninstalled: ${shop}`);
 });
 
+// ─── Compliance webhook dispatcher ───────────────────────────────────────────
+// Shopify routes all three GDPR topics to /webhooks/compliance.
+// The x-shopify-topic header tells us which one fired.
+webhookRouter.post('/compliance', async (req, res) => {
+  const result = await verifyAndParse(req, res);
+  if (!result) return;
+
+  const topic = (req.headers['x-shopify-topic'] as string ?? '').toLowerCase();
+  res.status(200).send('OK');
+
+  const { shop, body } = result;
+  logger.info(`GDPR compliance webhook: ${topic}`, { shop });
+
+  if (topic === 'customers/data_request') {
+    // We store no customer PII — nothing to return.
+  } else if (topic === 'customers/redact') {
+    // Analytics events keyed by sessionId only, not customer identity — nothing to redact.
+    logger.info('GDPR customers/redact: no PII stored', { shop });
+  } else if (topic === 'shop/redact') {
+    try {
+      const shopRecord = await prisma.shop.findUnique({ where: { shopDomain: shop } });
+      if (shopRecord) {
+        await prisma.analyticsEvent.deleteMany({ where: { shopId: shopRecord.id } });
+        await prisma.recommendation.deleteMany({ where: { shopId: shopRecord.id } });
+        await prisma.orderItem.deleteMany({ where: { order: { shopId: shopRecord.id } } });
+        await prisma.order.deleteMany({ where: { shopId: shopRecord.id } });
+        await prisma.product.deleteMany({ where: { shopId: shopRecord.id } });
+        await prisma.widgetConfig.deleteMany({ where: { shopId: shopRecord.id } });
+        await prisma.shop.delete({ where: { id: shopRecord.id } });
+        logger.info(`GDPR shop/redact complete: all data deleted for ${shop}`);
+      }
+    } catch (err) {
+      logger.error('GDPR shop/redact error', { shop, err });
+    }
+  }
+});
+
 // ─── GDPR Webhooks (required for Shopify App Store approval) ─────────────────
-// These must be registered in the Partners dashboard under "GDPR webhooks".
+// Individual routes kept for backward compatibility.
 // SmartRec stores no customer PII; only shop-level aggregate analytics.
 
 /**
