@@ -4,6 +4,7 @@ import 'express-async-errors';
 import express from 'express';
 import cookieSession from 'cookie-session';
 import cors from 'cors';
+import path from 'path';
 import { shopifyApp } from './services/shopify';
 import { authRouter } from './routes/auth';
 import { webhookRouter } from './routes/webhooks';
@@ -43,26 +44,22 @@ app.use(cookieSession({
 // ─── Health check (used by Railway) ──────────────────────────────────────────
 app.get('/health', (_req, res) => res.json({ status: 'ok', ts: new Date().toISOString() }));
 
-// ─── Root: embedded app entry point ──────────────────────────────────────────
-// Shopify iframes this URL when a merchant opens the app in admin.
-// If there's a valid session we show a redirect stub; otherwise re-auth.
-app.get('/', (req, res) => {
-  const shop = req.query.shop as string | undefined;
-  const host = req.query.host as string | undefined;
-  if (!shop) {
-    return res.status(400).send('Missing shop parameter.');
-  }
-  // Redirect into the Shopify Admin embedded view
-  const apiKey = process.env.SHOPIFY_API_KEY ?? '';
-  const hostParam = host ? `&host=${host}` : '';
-  res.redirect(`https://${shop}/admin/apps/${apiKey}?shop=${shop}${hostParam}`);
-});
+// ─── Serve React admin UI static assets (built by Vite into backend/public) ──
+const publicDir = path.join(__dirname, '..', 'public');
+app.use(express.static(publicDir));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use('/auth', authRouter);
 app.use('/webhooks', webhookRouter);
 app.use('/api', apiRouter);
 app.use('/public', publicRouter);  // Unauthenticated endpoints called by storefront widget
+
+// ─── SPA fallback — must be AFTER all API routes ─────────────────────────────
+// Any GET that didn't match an API route gets index.html so React Router works
+// inside the Shopify embedded iframe.
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
 
 // ─── Error handler ────────────────────────────────────────────────────────────
 app.use(errorHandler);
