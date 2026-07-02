@@ -1,3 +1,4 @@
+import '@shopify/shopify-api/adapters/node';
 import 'dotenv/config';
 import 'express-async-errors';
 import express from 'express';
