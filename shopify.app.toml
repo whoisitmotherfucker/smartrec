@@ -18,3 +18,5 @@ api_version = "2025-04"
 
 [pos]
 embedded = false
+[app_urls]
+privacy = "https://keikoace.github.io/smartrec-site"
